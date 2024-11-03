@@ -1,0 +1,84 @@
+### 👤 프로필 이미지 추가하기
+1. **ChatVO에 profileImg 필드 추가**
+   - 각 사용자의 프로필 이미지를 저장하기 위해 ChatVO 클래스에 `profileImg` 필드를 추가합니다. 이를 통해 채팅 메시지와 함께 사용자의 프로필 이미지를 표시할 수 있습니다.
+   ```java
+   public class ChatVO {
+       private int chatNo;
+       private String memId;
+       private String memNm;
+       private int roomNo;
+       private String chatMsg;
+       private String sendDate;
+       private String profileImg;
+   }
+   ```
+
+2. **chat.xml 수정 - 프로필 이미지 조회**
+   - 채팅 기록을 조회할 때 `profile_img`를 함께 조회하여 사용자의 프로필 이미지를 화면에 표시할 수 있도록 합니다. `NVL` 함수를 사용해 프로필 이미지가 없는 경우 기본 이미지(`non.png`)로 대체합니다.
+   ```xml
+   <select id="getChatList" parameterType="int" resultType="ChatVO">
+       SELECT a.chat_no,
+              a.mem_id,
+              b.mem_nm,
+              NVL(b.profile_img, '/assets/img/non.png') as profile_img,
+              a.room_no,
+              a.chat_msg,
+              TO_CHAR(a.send_date, 'RR/MM/DD HH24:MI') as send_date
+       FROM chatlog a, members b
+       WHERE a.mem_id = b.mem_id
+       AND a.room_no = #{roomNo}
+       ORDER BY 1
+   </select>
+   ```
+   - **설명**: `NVL` 함수를 사용해 `profile_img`가 null일 경우 기본 이미지 경로로 대체하여, 프로필 이미지가 없는 사용자의 경우에도 UI가 깔끔하게 유지됩니다.
+
+3. **chatView.jsp 수정하기**
+   - **로그인 세션 프로필 이미지 받기**
+     - 로그인한 사용자의 프로필 이미지를 세션에서 받아와서 채팅 화면에 사용합니다.
+   ```javascript
+   <script>
+       $(document).ready(function() {
+           var client;
+           var chatBox = $(".box");
+           var memId = '${sessionScope.login.memId}';
+           var memNm = '${sessionScope.login.memNm}';
+           var profileImg = '${sessionScope.login.profileImg}';
+       });
+   </script>
+   ```
+   - **채팅 화면에 프로필 이미지 추가**
+     - 사용자가 채팅을 보낼 때마다 해당 사용자의 프로필 이미지를 채팅 메시지와 함께 화면에 표시합니다.
+     - **내 채팅일 경우**
+       - 로그인한 사용자가 보낸 메시지일 경우, 해당 사용자의 프로필 이미지를 표시합니다.
+     ```html
+     <c:if test="${sessionScope.login.memId eq chat.memId}">
+         <ul>
+             <li class="me pr-2">
+                 <strong>${chat.memId} (${chat.memNm})</strong>
+                 <img src="${chat.profileImg}" id="myImage" class="rounded-circle img-thumbnail shadow-sm" width="60" style="cursor: pointer;">
+                 <div class="me">
+                     <p class='myChat chat-box text-left p-3'>${chat.chatMsg}</p>
+                     <strong class="align-self-end">${chat.sendDate}</strong>
+                 </div>
+             </li>
+         </ul>
+     </c:if>
+     ```
+     - **다른 사람의 채팅일 경우**
+       - 다른 사용자가 보낸 메시지일 경우, 해당 사용자의 프로필 이미지를 표시합니다.
+     ```html
+     <c:if test="${sessionScope.login.memId ne chat.memId}">
+         <ul>
+             <li class="other pr-2">
+                 <strong>${chat.memId} (${chat.memNm})</strong>
+                 <img src="${chat.profileImg}" id="theirImage" class="rounded-circle img-thumbnail shadow-sm" width="60" style="cursor: pointer;">
+                 <div class="other">
+                     <p class='otherChat chat-box text-left p-3'>${chat.chatMsg}</p>
+                     <strong class="align-self-end">${chat.sendDate}</strong>
+                 </div>
+             </li>
+         </ul>
+     </c:if>
+     ```
+
+
